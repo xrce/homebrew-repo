@@ -1,79 +1,48 @@
-require "formula"
+cask "metasploit" do
+  version "6.4.44,20250107112857"
+  sha256 "b06fc1013bd04098df87cf965ec70454b17221273cbbd42022e19daf2ef5f5c0"
 
-class MetasploitFramework < Formula
-  homepage "https://github.com/rapid7/metasploit-framework"
-  url "https://github.com/rapid7/metasploit-framework", :using => :git, :tag => '0e72da6'
-  version "6-0e72da6"
+  url "https://osx.metasploit.com/metasploit-framework-#{version.csv.first}-#{version.csv.second}-1rapid7-1.x86_64.pkg"
+  name "Metasploit Framework"
+  desc "Penetration testing framework"
+  homepage "https://www.metasploit.com/"
 
-  depends_on "ruby"
-  depends_on "openssl"
-  depends_on "libxml2"
-  depends_on "libxslt"
-  depends_on "sqlite"
-  depends_on "postgresql"
+  livecheck do
+    url "https://osx.metasploit.com/LATEST"
+    regex(/metasploit[._-]framework[._-]v?(\d+(?:\.\d+)+)[._-](\d+(?:\.git\.\d+\.\h+)?).*\.pkg/i)
+    strategy :page_match do |page, regex|
+      match = page.match(regex)
+      next if match.blank?
 
-  resource "bundler" do
-    url "https://rubygems.org/gems/rubygems-update-3.6.3.gem"
-    sha256 "6a46f9876e0ed8b5d9d1bd789b0c3308490eb5e7d21d0571ab4ef2d64211bb4f"
+      "#{match[1]},#{match[2]}"
+    end
   end
 
-  def install
-    (buildpath/"vendor/bundle").mkpath
-    resources.each do |r|
-      r.verify_download_integrity(r.fetch)
-      system("gem", "install", r.cached_download, "--no-document",
-             "--install-dir", "vendor/bundle")
-    end
+  depends_on formula: "nmap"
 
-    ENV["GEM_HOME"] = "#{buildpath}/vendor/bundle"
-    system "ruby", "#{buildpath}/vendor/bundle/bin/bundle", "install",
-           "--no-cache", "--path", "vendor/bundle"
+  pkg "metasploit-framework-#{version.csv.first}-#{version.csv.second}-1rapid7-1.x86_64.pkg"
+  binary "/opt/metasploit-framework/bin/msfbinscan"
+  binary "/opt/metasploit-framework/bin/msfconsole"
+  binary "/opt/metasploit-framework/bin/msfd"
+  binary "/opt/metasploit-framework/bin/msfdb"
+  binary "/opt/metasploit-framework/bin/msfelfscan"
+  binary "/opt/metasploit-framework/bin/msfmachscan"
+  binary "/opt/metasploit-framework/bin/msfpescan"
+  binary "/opt/metasploit-framework/bin/msfrop"
+  binary "/opt/metasploit-framework/bin/msfrpc"
+  binary "/opt/metasploit-framework/bin/msfrpcd"
+  binary "/opt/metasploit-framework/bin/msfvenom"
 
-    (bin/"msfconsole").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfconsole "$@"
-    EOS
-    (bin/"msfd").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfd "$@"
-    EOS
-    (bin/"msfdb").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfdb "$@"
-    EOS
-    (bin/"msfrpc").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfrpc "$@"
-    EOS
-    (bin/"msfrpcd").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfrpcd "$@"
-    EOS
-    (bin/"msfupdate").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfupdate "$@"
-    EOS
-    (bin/"msfvenom").write <<~EOS
-      #!/usr/bin/env bash
-      export GEM_HOME="#{pkgshare}/vendor/bundle"
-      export BUNDLE_GEMFILE="#{pkgshare}/Gemfile"
-      #{pkgshare}/vendor/bundle/bin/bundle exec ruby #{pkgshare}/msfvenom "$@"
-    EOS
+  uninstall script: {
+              executable: "/opt/metasploit-framework/bin/msfremove",
+              input:      ["y"],
+              sudo:       true,
+            },
+            rmdir:  "/opt/metasploit-framework"
 
-    pkgshare.install Dir['*']
-    pkgshare.install ".git"
-    pkgshare.install ".bundle"
+  zap trash: "~/.msf4"
+
+  caveats do
+    requires_rosetta
   end
 end
